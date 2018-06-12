@@ -4,42 +4,42 @@ CLASS zcl_fdlog DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
-
+    INTERFACES zif_fdlog.
+    ALIASES i FOR zif_fdlog~i.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
     CONSTANTS c_utc TYPE string VALUE 'UTC' ##NO_TEXT.
 
     METHODS:
-      log
-        IMPORTING is_data TYPE any,
+      send
+        IMPORTING is_data TYPE any
+        RAISING   zcx_fdlog,
       unix_time
         IMPORTING iv_date             TYPE sy-datum OPTIONAL
                   iv_time             TYPE sy-uzeit OPTIONAL
                   iv_zone             TYPE sy-zonlo DEFAULT sy-zonlo
-        RETURNING VALUE(rv_timestamp) TYPE int8.
+        RETURNING VALUE(rv_timestamp) TYPE zif_fdlog=>tv_unixtime,
+      create_fdlog
+        RETURNING VALUE(rs_fdlog) TYPE zif_fdlog~ts_fdlog.
 ENDCLASS.
 
 
 
 CLASS zcl_fdlog IMPLEMENTATION.
 
-  METHOD log.
-    TRY.
-        DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
+  METHOD send.
+    DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
 
-        DATA(lo_request) = lo_rest->if_rest_client~create_request_entity( ).
-        DATA(lv_data) = /ui2/cl_json=>serialize( is_data ).
-        lo_request->set_string_data( lv_data ).
-        lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
+    DATA(lo_request) = lo_rest->if_rest_client~create_request_entity( ).
+    DATA(lv_data) = /ui2/cl_json=>serialize( is_data ).
+    lo_request->set_string_data( lv_data ).
+    lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
 
-        lo_rest->if_rest_client~post( lo_request ).
+    lo_rest->if_rest_client~post( lo_request ).
 
-        DATA(lv_status) = lo_rest->if_rest_client~get_status( ).
-        DATA(lv_response) = lo_rest->if_rest_client~get_response_entity( )->get_string_data( ).
-      CATCH cx_root INTO DATA(cx).
-        DATA(lv_msg) = cx->get_text( ).
-    ENDTRY.
+    DATA(lv_status) = lo_rest->if_rest_client~get_status( ).
+    DATA(lv_response) = lo_rest->if_rest_client~get_response_entity( )->get_string_data( ).
   ENDMETHOD.
 
   METHOD unix_time.
@@ -66,8 +66,20 @@ CLASS zcl_fdlog IMPLEMENTATION.
         iv_time = lv_time_utc
       IMPORTING
         ev_timestamp = DATA(lv_unixtime) ).
-    rv_timestamp = lv_unixtime.
-    rv_timestamp = rv_timestamp / 1000.
+    rv_timestamp = lv_unixtime / 1000.
+  ENDMETHOD.
+
+  METHOD zif_fdlog~i.
+
+  ENDMETHOD.
+
+  METHOD create_fdlog.
+    rs_fdlog-system = sy-sysid.
+    rs_fdlog-client = sy-mandt.
+    rs_fdlog-user = sy-uname.
+    rs_fdlog-host = sy-host.
+    rs_fdlog-program = sy-cprog.
+    rs_fdlog-time = unix_time( ).
   ENDMETHOD.
 
 ENDCLASS.
