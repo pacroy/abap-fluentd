@@ -4,52 +4,35 @@ CLASS zcl_fdlog DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
-    METHODS:
-      constructor
-        IMPORTING io_http TYPE REF TO if_http_client OPTIONAL,
-      log
-        IMPORTING is_data TYPE any.
+
+
   PROTECTED SECTION.
   PRIVATE SECTION.
-    DATA: ao_rest TYPE REF TO cl_rest_http_client.
+    METHODS:
+      log
+        IMPORTING is_data TYPE any.
 ENDCLASS.
 
 
 
 CLASS zcl_fdlog IMPLEMENTATION.
 
-  METHOD constructor.
-
-    DATA: lo_http TYPE REF TO if_http_client.
-
-    IF ( io_http IS NOT BOUND ).
-      cl_http_client=>create_by_url(
-        EXPORTING
-          url = 'http://app.chairat.me:8888/npl'
-        IMPORTING
-          client = lo_http ).
-    ELSE.
-      lo_http = io_http.
-    ENDIF.
-
-    lo_http->request->set_version( if_http_request=>co_protocol_version_1_1 ).
-    lo_http->request->set_content_type( if_rest_media_type=>gc_appl_json ).
-
-    ao_rest = NEW #( lo_http ).
-
-  ENDMETHOD.
-
   METHOD log.
+    TRY.
+        DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
 
-    DATA(lo_request) = ao_rest->if_rest_client~create_request_entity( ).
-    data(lv_data) = /ui2/cl_json=>serialize( is_data ).
-    lo_request->set_string_data( lv_data ).
+        DATA(lo_request) = lo_rest->if_rest_client~create_request_entity( ).
+        DATA(lv_data) = /ui2/cl_json=>serialize( is_data ).
+        lo_request->set_string_data( lv_data ).
+        lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
 
-    ao_rest->if_rest_client~post( lo_request ).
+        lo_rest->if_rest_client~post( lo_request ).
 
-    data(lv_status) = ao_rest->if_rest_client~get_status( ).
-    data(lv_response) = ao_rest->if_rest_client~get_response_entity( )->get_string_data( ).
-
+        DATA(lv_status) = lo_rest->if_rest_client~get_status( ).
+        DATA(lv_response) = lo_rest->if_rest_client~get_response_entity( )->get_string_data( ).
+      CATCH cx_root INTO DATA(cx).
+        DATA(lv_msg) = cx->get_text( ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
