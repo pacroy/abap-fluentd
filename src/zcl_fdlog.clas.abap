@@ -8,9 +8,16 @@ CLASS zcl_fdlog DEFINITION
 
   PROTECTED SECTION.
   PRIVATE SECTION.
+    CONSTANTS c_utc TYPE string VALUE 'UTC' ##NO_TEXT.
+
     METHODS:
       log
-        IMPORTING is_data TYPE any.
+        IMPORTING is_data TYPE any,
+      unix_time
+        IMPORTING iv_date             TYPE sy-datum OPTIONAL
+                  iv_time             TYPE sy-uzeit OPTIONAL
+                  iv_zone             TYPE sy-zonlo DEFAULT sy-zonlo
+        RETURNING VALUE(rv_timestamp) TYPE int8.
 ENDCLASS.
 
 
@@ -33,6 +40,34 @@ CLASS zcl_fdlog IMPLEMENTATION.
       CATCH cx_root INTO DATA(cx).
         DATA(lv_msg) = cx->get_text( ).
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD unix_time.
+    DATA: lv_timestamp TYPE tzonref-tstamps,
+          lv_date      TYPE sy-datum,
+          lv_time      TYPE sy-uzeit,
+          lv_date_utc  TYPE sy-datum,
+          lv_time_utc  TYPE sy-uzeit.
+
+    IF ( iv_date IS NOT INITIAL ).
+      lv_date = iv_date.
+      lv_time = iv_time.
+    ELSE.
+      lv_date = sy-datum.
+      lv_time = sy-uzeit.
+    ENDIF.
+
+    CONVERT DATE lv_date TIME lv_time INTO TIME STAMP lv_timestamp TIME ZONE iv_zone.
+    CONVERT TIME STAMP lv_timestamp TIME ZONE c_utc INTO DATE lv_date_utc TIME lv_time_utc.
+
+    cl_pco_utility=>convert_abap_timestamp_to_java(
+      EXPORTING
+        iv_date = lv_date_utc
+        iv_time = lv_time_utc
+      IMPORTING
+        ev_timestamp = DATA(lv_unixtime) ).
+    rv_timestamp = lv_unixtime.
+    rv_timestamp = rv_timestamp / 1000.
   ENDMETHOD.
 
 ENDCLASS.
