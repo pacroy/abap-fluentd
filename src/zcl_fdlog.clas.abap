@@ -11,7 +11,7 @@ CLASS zcl_fdlog DEFINITION
         IMPORTING is_data TYPE any.
   PROTECTED SECTION.
   PRIVATE SECTION.
-    DATA: ao_http TYPE REF TO if_http_client.
+    DATA: ao_rest TYPE REF TO cl_rest_http_client.
 ENDCLASS.
 
 
@@ -20,31 +20,35 @@ CLASS zcl_fdlog IMPLEMENTATION.
 
   METHOD constructor.
 
+    DATA: lo_http TYPE REF TO if_http_client.
+
     IF ( io_http IS NOT BOUND ).
       cl_http_client=>create_by_url(
         EXPORTING
           url = 'http://app.chairat.me:8888/npl'
         IMPORTING
-          client = ao_http ).
+          client = lo_http ).
     ELSE.
-      ao_http = io_http.
+      lo_http = io_http.
     ENDIF.
+
+    lo_http->request->set_version( if_http_request=>co_protocol_version_1_1 ).
+    lo_http->request->set_content_type( if_rest_media_type=>gc_appl_json ).
+
+    ao_rest = NEW #( lo_http ).
 
   ENDMETHOD.
 
   METHOD log.
 
-    DATA(lv_data) = /ui2/cl_json=>serialize( is_data ).
+    DATA(lo_request) = ao_rest->if_rest_client~create_request_entity( ).
+    data(lv_data) = /ui2/cl_json=>serialize( is_data ).
+    lo_request->set_string_data( lv_data ).
 
-    ao_http->request->set_version( if_http_request=>co_protocol_version_1_1 ).
-    ao_http->request->set_content_type( if_rest_media_type=>gc_appl_json ).
-    ao_http->request->set_cdata( lv_data ).
-    ao_http->send( EXPORTING timeout = 1 EXCEPTIONS OTHERS = 1 ).
+    ao_rest->if_rest_client~post( lo_request ).
 
-    ao_http->receive( EXCEPTIONS OTHERS = 1 ).
-
-    ao_http->response->get_status( IMPORTING code = DATA(lv_code) reason = DATA(lv_reason) ).
-    DATA(lv_response) = ao_http->response->get_cdata( ).
+    data(lv_status) = ao_rest->if_rest_client~get_status( ).
+    data(lv_response) = ao_rest->if_rest_client~get_response_entity( )->get_string_data( ).
 
   ENDMETHOD.
 
