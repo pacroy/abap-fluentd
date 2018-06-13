@@ -13,6 +13,8 @@ CLASS ltcl_send DEFINITION FINAL FOR TESTING
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: ao_cut  TYPE REF TO zcl_fdlog.
+    DATA: ao_http  TYPE REF TO if_http_client.
+    DATA: ao_rest  TYPE REF TO zcl_fdlog.
     METHODS:
       setup,
       happy_path FOR TESTING RAISING cx_static_check.
@@ -23,13 +25,15 @@ CLASS ltcl_send IMPLEMENTATION.
 
   METHOD setup.
 
-    ao_cut = NEW #( ).
+    ao_cut = NEW #( iv_upd_task = abap_false ).
+*    DATA(lo_) = CAST if_( cl_abap_testdouble=>create( 'IF_' ) ) ##NO_TEXT.
+
 
   ENDMETHOD.
 
   METHOD happy_path.
-
-
+    ao_cut->i( 'Test message' ).
+    ao_cut->send( ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -53,7 +57,7 @@ CLASS ltcl_unix_time IMPLEMENTATION.
 
   METHOD setup.
 
-    ao_cut = NEW #( ).
+    ao_cut = NEW #( iv_upd_task = abap_false ).
     ao_abap = CAST zif_fdlog_abap( cl_abap_testdouble=>create( 'ZIF_FDLOG_ABAP') ) ##NO_TEXT.
     zcl_fdlog_inject=>inject_abap( ao_abap ).
 
@@ -90,7 +94,7 @@ CLASS ltcl_write_log IMPLEMENTATION.
 
   METHOD setup.
 
-    ao_cut = NEW #( 'ABAPUNIT' ).
+    ao_cut = NEW #( iv_inst_name = 'ABAPUNIT' iv_upd_task = abap_false ).
     ao_cut->read_and_clear( ).
 
   ENDMETHOD.
@@ -137,8 +141,8 @@ CLASS ltcl_write_log IMPLEMENTATION.
     MESSAGE ID 'SY' TYPE 'S' NUMBER 499
       WITH 'This is' 'a test'.
 
-    ao_cut->write( ).
-    ao_cut->write( VALUE #( msgid = '00' msgno = '001' msgty = 'I' msgv1 = 'Test again' msgv2 = 'and again' ) ).
+    ao_cut->log( ).
+    ao_cut->log( VALUE #( msgid = '00' msgno = '001' msgty = 'I' msgv1 = 'Test again' msgv2 = 'and again' ) ).
 
     DATA(lt_fdlog) = ao_cut->read_and_clear( ).
     cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( lt_fdlog ) ).

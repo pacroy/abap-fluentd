@@ -11,12 +11,14 @@ CLASS zcl_fdlog DEFINITION
     ALIASES e FOR zif_fdlog~e.
     ALIASES a FOR zif_fdlog~a.
     ALIASES x FOR zif_fdlog~x.
-    ALIASES write FOR zif_fdlog~write.
+    ALIASES log FOR zif_fdlog~log.
     ALIASES send FOR zif_fdlog~send.
 
     METHODS:
       constructor
-        IMPORTING iv_inst_name TYPE shm_inst_name DEFAULT cl_shm_area=>default_instance .
+        IMPORTING
+          iv_inst_name TYPE shm_inst_name DEFAULT cl_shm_area=>default_instance
+          iv_upd_task  TYPE abap_bool DEFAULT abap_true.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -57,7 +59,10 @@ CLASS zcl_fdlog DEFINITION
       read_and_clear
         RETURNING VALUE(rt_fdlog) TYPE zif_fdlog=>tt_fdlog
         RAISING
-                  cx_shm_attach_error.
+                  cx_shm_attach_error,
+      add_message
+        IMPORTING iv_message TYPE string
+                  iv_msgtype TYPE sy-msgty.
 ENDCLASS.
 
 
@@ -67,6 +72,7 @@ CLASS zcl_fdlog IMPLEMENTATION.
   METHOD send.
     TRY.
         DATA(lt_fdlog) = read_and_clear( ).
+        IF ( lt_fdlog IS INITIAL ). RETURN. ENDIF.
 
         DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
 
@@ -149,6 +155,13 @@ CLASS zcl_fdlog IMPLEMENTATION.
 
   METHOD constructor.
     av_inst_name = iv_inst_name.
+
+    IF ( iv_upd_task = abap_true ).
+      SET UPDATE TASK LOCAL.
+      CALL FUNCTION 'Z_FDLOG_SEND' IN UPDATE TASK
+        EXPORTING
+          im_inst_name = av_inst_name.
+    ENDIF.
   ENDMETHOD.
 
   METHOD read_and_clear.
@@ -162,66 +175,30 @@ CLASS zcl_fdlog IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_fdlog~i.
-    TRY.
-        DATA(ls_fdlog) = create_fdlog( ).
-        ls_fdlog-message = iv_message.
-        ls_fdlog-msgtype = 'I'.
-        append( VALUE #( ( ls_fdlog ) ) ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
+    add_message( iv_message = iv_message iv_msgtype = 'I' ).
   ENDMETHOD.
 
   METHOD zif_fdlog~s.
-    TRY.
-        DATA(ls_fdlog) = create_fdlog( ).
-        ls_fdlog-message = iv_message.
-        ls_fdlog-msgtype = 'S'.
-        append( VALUE #( ( ls_fdlog ) ) ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
+    add_message( iv_message = iv_message iv_msgtype = 'S' ).
   ENDMETHOD.
 
   METHOD zif_fdlog~w.
-    TRY.
-        DATA(ls_fdlog) = create_fdlog( ).
-        ls_fdlog-message = iv_message.
-        ls_fdlog-msgtype = 'W'.
-        append( VALUE #( ( ls_fdlog ) ) ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
+    add_message( iv_message = iv_message iv_msgtype = 'W' ).
   ENDMETHOD.
 
   METHOD zif_fdlog~e.
-    TRY.
-        DATA(ls_fdlog) = create_fdlog( ).
-        ls_fdlog-message = iv_message.
-        ls_fdlog-msgtype = 'E'.
-        append( VALUE #( ( ls_fdlog ) ) ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
+    add_message( iv_message = iv_message iv_msgtype = 'E' ).
   ENDMETHOD.
 
   METHOD zif_fdlog~a.
-    TRY.
-        DATA(ls_fdlog) = create_fdlog( ).
-        ls_fdlog-message = iv_message.
-        ls_fdlog-msgtype = 'A'.
-        append( VALUE #( ( ls_fdlog ) ) ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
+    add_message( iv_message = iv_message iv_msgtype = 'A' ).
   ENDMETHOD.
 
   METHOD zif_fdlog~x.
-    TRY.
-        DATA(ls_fdlog) = create_fdlog( ).
-        ls_fdlog-message = iv_message.
-        ls_fdlog-msgtype = 'X'.
-        append( VALUE #( ( ls_fdlog ) ) ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
+    add_message( iv_message = iv_message iv_msgtype = 'X' ).
   ENDMETHOD.
 
-  METHOD zif_fdlog~write.
+  METHOD zif_fdlog~log.
     TRY.
         DATA ls_symsg TYPE symsg.
 
@@ -240,6 +217,16 @@ CLASS zcl_fdlog IMPLEMENTATION.
         ls_fdlog-msgtype = ls_symsg-msgty.
         ls_fdlog-msgid = ls_symsg-msgid.
         ls_fdlog-msgno = ls_symsg-msgno.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD add_message.
+    TRY.
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = iv_message.
+        ls_fdlog-msgtype = iv_msgtype.
         append( VALUE #( ( ls_fdlog ) ) ).
       CATCH cx_root INTO DATA(x).
     ENDTRY.
