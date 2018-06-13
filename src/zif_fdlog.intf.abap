@@ -1,6 +1,6 @@
 INTERFACE zif_fdlog
   PUBLIC .
-  TYPES: tv_unixtime TYPE string.
+  TYPES: tv_unixtime TYPE p LENGTH 16 DECIMALS 0.
 
   TYPES: BEGIN OF ts_fdlog,
            system  TYPE syst-sysid,

@@ -33,6 +33,7 @@ CLASS zcl_fdlog IMPLEMENTATION.
 
     DATA(lo_request) = lo_rest->if_rest_client~create_request_entity( ).
     DATA(lv_data) = /ui2/cl_json=>serialize( is_data ).
+    REPLACE ALL OCCURRENCES OF '"TIME"' IN lv_data WITH '"time"'.
     lo_request->set_string_data( lv_data ).
     lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
 
