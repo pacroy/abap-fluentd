@@ -6,19 +6,58 @@ CLASS zcl_fdlog DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_fdlog.
     ALIASES i FOR zif_fdlog~i.
+    ALIASES s FOR zif_fdlog~s.
+    ALIASES w FOR zif_fdlog~w.
+    ALIASES e FOR zif_fdlog~e.
+    ALIASES a FOR zif_fdlog~a.
+    ALIASES x FOR zif_fdlog~x.
+    ALIASES write FOR zif_fdlog~write.
+    ALIASES send FOR zif_fdlog~send.
+
+    METHODS:
+      constructor
+        IMPORTING iv_inst_name TYPE shm_inst_name DEFAULT cl_shm_area=>default_instance .
 
   PROTECTED SECTION.
   PRIVATE SECTION.
     CONSTANTS c_utc TYPE string VALUE 'UTC' ##NO_TEXT.
 
+    DATA: av_inst_name TYPE shm_inst_name.
+
     METHODS:
-      send
-        IMPORTING is_data TYPE any
-        RAISING   zcx_fdlog,
       current_unix_time
         RETURNING VALUE(rv_timestamp) TYPE zif_fdlog=>tv_unixtime,
       create_fdlog
-        RETURNING VALUE(rs_fdlog) TYPE zif_fdlog~ts_fdlog.
+        RETURNING VALUE(rs_fdlog) TYPE zif_fdlog~ts_fdlog,
+      attach_for_update
+        RETURNING VALUE(r_result) TYPE REF TO zcl_fdlog_shr_area
+        RAISING
+                  cx_shm_attach_error,
+      attach_for_read
+        RETURNING VALUE(r_result) TYPE REF TO zcl_fdlog_shr_area
+        RAISING
+                  cx_shm_attach_error,
+      detach
+        IMPORTING
+          i_shr_area TYPE REF TO zcl_fdlog_shr_area
+        RAISING
+          cx_shm_already_detached
+          cx_shm_completion_error
+          cx_shm_secondary_commit
+          cx_shm_wrong_handle,
+      append
+        IMPORTING
+          it_fdlog TYPE zif_fdlog=>tt_fdlog
+        RAISING
+          cx_shm_attach_error,
+      read
+        RETURNING VALUE(rt_fdlog) TYPE zif_fdlog=>tt_fdlog
+        RAISING
+                  cx_shm_attach_error,
+      read_and_clear
+        RETURNING VALUE(rt_fdlog) TYPE zif_fdlog=>tt_fdlog
+        RAISING
+                  cx_shm_attach_error.
 ENDCLASS.
 
 
@@ -26,18 +65,23 @@ ENDCLASS.
 CLASS zcl_fdlog IMPLEMENTATION.
 
   METHOD send.
-    DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
+    TRY.
+        DATA(lt_fdlog) = read_and_clear( ).
 
-    DATA(lo_request) = lo_rest->if_rest_client~create_request_entity( ).
-    DATA(lv_data) = /ui2/cl_json=>serialize( is_data ).
-    REPLACE ALL OCCURRENCES OF '"TIME"' IN lv_data WITH '"time"'.
-    lo_request->set_string_data( lv_data ).
-    lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
+        DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
 
-    lo_rest->if_rest_client~post( lo_request ).
+        DATA(lo_request) = lo_rest->if_rest_client~create_request_entity( ).
+        DATA(lv_data) = /ui2/cl_json=>serialize( lt_fdlog ).
+        REPLACE ALL OCCURRENCES OF '"TIME"' IN lv_data WITH '"time"'.
+        lo_request->set_string_data( lv_data ).
+        lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
 
-    DATA(lv_status) = lo_rest->if_rest_client~get_status( ).
-    DATA(lv_response) = lo_rest->if_rest_client~get_response_entity( )->get_string_data( ).
+        lo_rest->if_rest_client~post( lo_request ).
+
+        DATA(lv_status) = lo_rest->if_rest_client~get_status( ).
+        DATA(lv_response) = lo_rest->if_rest_client~get_response_entity( )->get_string_data( ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
   ENDMETHOD.
 
   METHOD current_unix_time.
@@ -57,10 +101,6 @@ CLASS zcl_fdlog IMPLEMENTATION.
     rv_timestamp = lv_unixtime / 1000.
   ENDMETHOD.
 
-  METHOD zif_fdlog~i.
-
-  ENDMETHOD.
-
   METHOD create_fdlog.
     rs_fdlog-system = sy-sysid.
     rs_fdlog-client = sy-mandt.
@@ -68,6 +108,141 @@ CLASS zcl_fdlog IMPLEMENTATION.
     rs_fdlog-host = sy-host.
     rs_fdlog-program = sy-cprog.
     rs_fdlog-time = current_unix_time( ).
+  ENDMETHOD.
+
+  METHOD attach_for_read.
+    TRY.
+        r_result = zcl_fdlog_shr_area=>attach_for_read( inst_name = av_inst_name ).
+      CATCH cx_shm_no_active_version.
+        WAIT UP TO 1 SECONDS.
+        r_result = zcl_fdlog_shr_area=>attach_for_read( inst_name = av_inst_name ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD attach_for_update.
+    TRY.
+        r_result = zcl_fdlog_shr_area=>attach_for_update( inst_name = av_inst_name ).
+      CATCH cx_shm_no_active_version.
+        WAIT UP TO 1 SECONDS.
+        r_result = zcl_fdlog_shr_area=>attach_for_update( inst_name = av_inst_name ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD detach.
+    i_shr_area->detach_commit( ).
+  ENDMETHOD.
+
+  METHOD append.
+    DATA(lo_shr_area) = attach_for_update( ).
+    DATA(lo_shr_root) = CAST zcl_fdlog_shr_root( lo_shr_area->get_root( ) ).
+
+    APPEND LINES OF it_fdlog TO lo_shr_root->data.
+
+    detach( lo_shr_area ).
+  ENDMETHOD.
+
+  METHOD read.
+    DATA(lo_shr_area) = attach_for_read( ).
+    rt_fdlog = lo_shr_area->root->data.
+    lo_shr_area->detach( ).
+  ENDMETHOD.
+
+  METHOD constructor.
+    av_inst_name = iv_inst_name.
+  ENDMETHOD.
+
+  METHOD read_and_clear.
+    DATA(lo_shr_area) = attach_for_update( ).
+    DATA(lo_shr_root) = CAST zcl_fdlog_shr_root( lo_shr_area->get_root( ) ).
+
+    rt_fdlog = lo_shr_root->data.
+    CLEAR lo_shr_root->data.
+
+    detach( lo_shr_area ).
+  ENDMETHOD.
+
+  METHOD zif_fdlog~i.
+    TRY.
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = iv_message.
+        ls_fdlog-msgtype = 'I'.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_fdlog~s.
+    TRY.
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = iv_message.
+        ls_fdlog-msgtype = 'S'.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_fdlog~w.
+    TRY.
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = iv_message.
+        ls_fdlog-msgtype = 'W'.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_fdlog~e.
+    TRY.
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = iv_message.
+        ls_fdlog-msgtype = 'E'.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_fdlog~a.
+    TRY.
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = iv_message.
+        ls_fdlog-msgtype = 'A'.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_fdlog~x.
+    TRY.
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = iv_message.
+        ls_fdlog-msgtype = 'X'.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD zif_fdlog~write.
+    TRY.
+        DATA ls_symsg TYPE symsg.
+
+        IF ( is_symsg IS NOT INITIAL ).
+          ls_symsg = is_symsg.
+        ELSE.
+          ls_symsg = CORRESPONDING #( sy ).
+        ENDIF.
+
+        MESSAGE ID ls_symsg-msgid TYPE ls_symsg-msgty NUMBER ls_symsg-msgno
+          WITH ls_symsg-msgv1 ls_symsg-msgv2 ls_symsg-msgv3 ls_symsg-msgv4
+          INTO DATA(lv_message).
+
+        DATA(ls_fdlog) = create_fdlog( ).
+        ls_fdlog-message = lv_message.
+        ls_fdlog-msgtype = ls_symsg-msgty.
+        ls_fdlog-msgid = ls_symsg-msgid.
+        ls_fdlog-msgno = ls_symsg-msgno.
+        append( VALUE #( ( ls_fdlog ) ) ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
