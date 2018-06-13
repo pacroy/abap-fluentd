@@ -10,8 +10,8 @@ CLASS ltcl_log DEFINITION FINAL FOR TESTING
 
   PUBLIC SECTION.
   PROTECTED SECTION.
-    DATA: ao_cut  TYPE REF TO zcl_fdlog.
   PRIVATE SECTION.
+    DATA: ao_cut  TYPE REF TO zcl_fdlog.
     METHODS:
       setup,
       happy_path FOR TESTING RAISING cx_static_check.
@@ -40,7 +40,7 @@ CLASS ltcl_log IMPLEMENTATION.
     ls_fdlog2-message = 'This is the 2nd message'.
     APPEND ls_fdlog2 TO lt_fdlog.
 
-    ao_cut->send( lt_fdlog ).
+*    ao_cut->send( lt_fdlog ).
 
   ENDMETHOD.
 
@@ -52,12 +52,12 @@ CLASS ltcl_unix_time DEFINITION FINAL FOR TESTING
 
   PUBLIC SECTION.
   PROTECTED SECTION.
-    DATA: ao_cut  TYPE REF TO zcl_fdlog.
   PRIVATE SECTION.
+    DATA: ao_cut  TYPE REF TO zcl_fdlog,
+          ao_abap TYPE REF TO zif_fdlog_abap.
     METHODS:
       setup,
-      happy_path FOR TESTING RAISING cx_static_check,
-      current_time FOR TESTING RAISING cx_static_check.
+      happy_path FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -66,36 +66,16 @@ CLASS ltcl_unix_time IMPLEMENTATION.
   METHOD setup.
 
     ao_cut = NEW #( ).
+    ao_abap = CAST zif_fdlog_abap( cl_abap_testdouble=>create( 'ZIF_FDLOG_ABAP') ) ##NO_TEXT.
+    zcl_fdlog_inject=>inject_abap( ao_abap ).
 
   ENDMETHOD.
 
   METHOD happy_path.
+    cl_abap_testdouble=>configure_call( ao_abap )->returning( '20180118120000' ).
+    ao_abap->get_utc_timestamp( ).
 
-    DATA: lv_timestamp TYPE tzonref-tstamps,
-          lv_date      TYPE sy-datum,
-          lv_time      TYPE sy-uzeit.
-
-    CONVERT DATE '20180118' TIME '120000' INTO TIME STAMP lv_timestamp TIME ZONE ao_cut->c_utc.
-    CONVERT TIME STAMP lv_timestamp TIME ZONE sy-zonlo INTO DATE lv_date TIME lv_time.
-
-    cl_abap_unit_assert=>assert_equals( exp = 1516276800 act = ao_cut->unix_time( iv_date = lv_date iv_time = lv_time ) ).
-
-    CONVERT DATE '20180118' TIME '120000' INTO TIME STAMP lv_timestamp TIME ZONE ao_cut->c_utc.
-    CONVERT TIME STAMP lv_timestamp TIME ZONE 'UTC+7' INTO DATE lv_date TIME lv_time.
-
-    cl_abap_unit_assert=>assert_equals( exp = 1516276800 act = ao_cut->unix_time( iv_date = lv_date iv_time = lv_time iv_zone = 'UTC+7' ) ).
-
-  ENDMETHOD.
-
-  METHOD current_time.
-    DATA: lv_timestamp TYPE tzonref-tstamps.
-
-    DATA(lv_date) = sy-datum.
-    DATA(lv_time) = sy-uzeit.
-
-    DATA(lv_time1) = ao_cut->unix_time( iv_date = lv_date iv_time = lv_time ).
-
-    cl_abap_unit_assert=>assert_true( xsdbool( ao_cut->unix_time( ) >= lv_time1 ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 1516276800 act = ao_cut->current_unix_time( ) ).
   ENDMETHOD.
 
 ENDCLASS.

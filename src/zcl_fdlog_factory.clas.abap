@@ -1,7 +1,8 @@
 CLASS zcl_fdlog_factory DEFINITION
   PUBLIC
   FINAL
-  CREATE PRIVATE .
+  CREATE PRIVATE
+  GLOBAL FRIENDS zcl_fdlog_inject.
 
   PUBLIC SECTION.
     CLASS-METHODS:
@@ -11,13 +12,16 @@ CLASS zcl_fdlog_factory DEFINITION
                   zcx_fdlog,
       rest
         IMPORTING io_http        TYPE REF TO if_http_client
-        RETURNING VALUE(ro_rest) TYPE REF TO cl_rest_http_client.
+        RETURNING VALUE(ro_rest) TYPE REF TO cl_rest_http_client,
+      abap
+        RETURNING VALUE(ro_abap) TYPE REF TO zif_fdlog_abap.
   PROTECTED SECTION.
   PRIVATE SECTION.
     CONSTANTS c_rfc_dest TYPE rfcdest VALUE 'FLUENTD' ##NO_TEXT.
 
     CLASS-DATA: ao_http TYPE REF TO if_http_client.
     CLASS-DATA: ao_rest TYPE REF TO cl_rest_http_client.
+    CLASS-DATA: ao_abap TYPE REF TO zif_fdlog_abap.
 ENDCLASS.
 
 
@@ -25,7 +29,7 @@ ENDCLASS.
 CLASS zcl_fdlog_factory IMPLEMENTATION.
 
   METHOD http.
-    IF ( ro_http IS NOT BOUND ).
+    IF ( ao_http IS NOT BOUND ).
       cl_http_client=>create_by_destination(
         EXPORTING
           destination = c_rfc_dest
@@ -41,10 +45,17 @@ CLASS zcl_fdlog_factory IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD rest.
-    IF ( ro_rest IS NOT BOUND ).
+    IF ( ao_rest IS NOT BOUND ).
       ao_rest = NEW #( io_http ).
     ENDIF.
     ro_rest = ao_rest.
+  ENDMETHOD.
+
+  METHOD abap.
+    IF ( ao_abap IS NOT BOUND ).
+      ao_abap = NEW zcl_fdlog_abap( ).
+    ENDIF.
+    ro_abap = ao_abap.
   ENDMETHOD.
 
 ENDCLASS.
