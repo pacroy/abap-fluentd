@@ -71,6 +71,23 @@ CLASS ltcl_send IMPLEMENTATION.
 
 ENDCLASS.
 
+class ltdb_fdlog_abap definition FOR TESTING create public.
+
+  public section.
+    INTERFACES lif_fdlog_abap.
+    DATA av_timestamp TYPE tzonref-tstamps.
+  protected section.
+  private section.
+endclass.
+
+class ltdb_fdlog_abap implementation.
+
+  method lif_fdlog_abap~get_utc_timestamp.
+    rv_timestamp = av_timestamp.
+  endmethod.
+
+endclass.
+
 CLASS ltcl_unix_time DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
@@ -79,7 +96,7 @@ CLASS ltcl_unix_time DEFINITION FINAL FOR TESTING
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: ao_cut  TYPE REF TO zcl_fdlog,
-          ao_abap TYPE REF TO zif_fdlog_abap.
+          ao_abap TYPE REF TO ltdb_fdlog_abap.
     METHODS:
       setup,
       happy_path FOR TESTING RAISING cx_static_check.
@@ -91,14 +108,13 @@ CLASS ltcl_unix_time IMPLEMENTATION.
   METHOD setup.
 
     ao_cut = NEW #( iv_upd_task = abap_false ).
-    ao_abap = CAST zif_fdlog_abap( cl_abap_testdouble=>create( 'ZIF_FDLOG_ABAP') ) ##NO_TEXT.
-    zcl_fdlog_inject=>inject_abap( ao_abap ).
+    ao_abap = NEW ltdb_fdlog_abap( ).
+    lcl_fdlog_inject=>inject_abap( ao_abap ).
 
   ENDMETHOD.
 
   METHOD happy_path.
-    cl_abap_testdouble=>configure_call( ao_abap )->returning( '20180118120000' ).
-    ao_abap->get_utc_timestamp( ).
+    ao_abap->av_timestamp = '20180118120000'.
 
     cl_abap_unit_assert=>assert_equals( exp = 1516276800 act = ao_cut->current_unix_time( ) ).
   ENDMETHOD.

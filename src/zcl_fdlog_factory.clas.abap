@@ -12,9 +12,7 @@ CLASS zcl_fdlog_factory DEFINITION
                   zcx_fdlog,
       rest
         IMPORTING io_http        TYPE REF TO if_http_client
-        RETURNING VALUE(ro_rest) TYPE REF TO if_rest_client,
-      abap
-        RETURNING VALUE(ro_abap) TYPE REF TO zif_fdlog_abap.
+        RETURNING VALUE(ro_rest) TYPE REF TO if_rest_client.
   PROTECTED SECTION.
   PRIVATE SECTION.
     CONSTANTS c_rfc_dest TYPE rfcdest VALUE 'FLUENTD' ##NO_TEXT.
@@ -49,13 +47,6 @@ CLASS zcl_fdlog_factory IMPLEMENTATION.
       ao_rest = NEW cl_rest_http_client( io_http ).
     ENDIF.
     ro_rest = ao_rest.
-  ENDMETHOD.
-
-  METHOD abap.
-    IF ( ao_abap IS NOT BOUND ).
-      ao_abap = NEW zcl_fdlog_abap( ).
-    ENDIF.
-    ro_abap = ao_abap.
   ENDMETHOD.
 
 ENDCLASS.

@@ -95,7 +95,7 @@ CLASS zcl_fdlog IMPLEMENTATION.
     DATA: lv_date_utc TYPE sy-datum,
           lv_time_utc TYPE sy-uzeit.
 
-    DATA(lv_timestamp) = zcl_fdlog_factory=>abap( )->get_utc_timestamp( ).
+    DATA(lv_timestamp) = lcl_fdlog_factory=>abap( )->get_utc_timestamp( ).
 
     CONVERT TIME STAMP lv_timestamp TIME ZONE c_utc INTO DATE lv_date_utc TIME lv_time_utc.
 
