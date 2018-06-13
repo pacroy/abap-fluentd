@@ -17,6 +17,12 @@ INTERFACE zif_fdlog
          tt_fdlog TYPE STANDARD TABLE OF ts_fdlog WITH EMPTY KEY.
 
   METHODS:
-    i
-      IMPORTING message TYPE string.
+    i IMPORTING iv_message TYPE string,
+    s IMPORTING iv_message TYPE string,
+    w IMPORTING iv_message TYPE string,
+    e IMPORTING iv_message TYPE string,
+    a IMPORTING iv_message TYPE string,
+    x IMPORTING iv_message TYPE string,
+    log IMPORTING is_symsg type symsg OPTIONAL,
+    send.
 ENDINTERFACE.

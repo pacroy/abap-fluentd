@@ -4,7 +4,7 @@
   <asx:values>
    <AREA_ATTRIBUTES>
     <AREA_NAME>ZCL_FDLOG_SHR_AREA</AREA_NAME>
-    <DESCRIPT>Prometheus Telemetry Shared Memory Area</DESCRIPT>
+    <DESCRIPT>Fluentd Log Shared Memory Area</DESCRIPT>
     <ROOT>ZCL_FDLOG_SHR_ROOT</ROOT>
     <AUTO_BUILD>X</AUTO_BUILD>
     <CLIENT_DEPENDENT>X</CLIENT_DEPENDENT>
