@@ -76,6 +76,8 @@ CLASS ltcl_write_log DEFINITION FINAL FOR TESTING
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: ao_cut  TYPE REF TO zcl_fdlog.
+
+    CLASS-METHODS: class_teardown.
     METHODS:
       setup RAISING cx_static_check,
       happy_path FOR TESTING RAISING cx_static_check,
@@ -152,6 +154,10 @@ CLASS ltcl_write_log IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = '001' act = ls_fdlog2-msgno ).
     cl_abap_unit_assert=>assert_equals( exp = 'I' act = ls_fdlog2-msgtype ).
     cl_abap_unit_assert=>assert_equals( exp = 'Test againand again' act = ls_fdlog2-message ).
+  ENDMETHOD.
+
+  METHOD class_teardown.
+    zcl_fdlog_shr_area=>free_instance( 'ABAPUNIT'  ).
   ENDMETHOD.
 
 ENDCLASS.
