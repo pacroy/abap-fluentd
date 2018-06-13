@@ -16,8 +16,9 @@ CLASS ltcl_send DEFINITION FINAL FOR TESTING
     DATA: ao_rest  TYPE REF TO if_rest_client.
     DATA: ao_entity  TYPE REF TO if_rest_entity.
     METHODS:
-      setup,
-      happy_path FOR TESTING RAISING cx_static_check.
+      setup RAISING cx_static_check,
+      happy_path FOR TESTING RAISING cx_static_check,
+      no_data_to_send FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -25,7 +26,9 @@ CLASS ltcl_send IMPLEMENTATION.
 
   METHOD setup.
 
-    ao_cut = NEW #( iv_upd_task = abap_false ).
+    ao_cut = NEW #( iv_inst_name = 'ABAPUNIT' iv_upd_task = abap_false ).
+    ao_cut->read_and_clear( ).
+
     ao_rest = CAST if_rest_client( cl_abap_testdouble=>create( 'IF_REST_CLIENT' ) ) ##NO_TEXT.
     zcl_fdlog_inject=>inject_rest( ao_rest ).
     ao_entity = CAST if_rest_entity( cl_abap_testdouble=>create( 'IF_REST_ENTITY' ) ) ##NO_TEXT.
@@ -44,6 +47,22 @@ CLASS ltcl_send IMPLEMENTATION.
     ao_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
 
     ao_cut->i( 'Test message' ).
+    ao_cut->send( ).
+
+    cl_abap_testdouble=>verify_expectations( ao_rest ).
+    cl_abap_testdouble=>verify_expectations( ao_entity ).
+  ENDMETHOD.
+
+  METHOD no_data_to_send.
+    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_entity ).
+    ao_rest->create_request_entity( ).
+    cl_abap_testdouble=>configure_call( ao_rest )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
+    ao_rest->post( ao_entity ).
+    cl_abap_testdouble=>configure_call( ao_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
+    ao_entity->set_string_data( `` ).
+    cl_abap_testdouble=>configure_call( ao_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
+    ao_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
+
     ao_cut->send( ).
 
     cl_abap_testdouble=>verify_expectations( ao_rest ).
