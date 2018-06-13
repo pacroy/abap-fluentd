@@ -19,7 +19,6 @@ CLASS zcl_fdlog_factory DEFINITION
 
     CLASS-DATA: ao_http TYPE REF TO if_http_client.
     CLASS-DATA: ao_rest TYPE REF TO if_rest_client.
-    CLASS-DATA: ao_abap TYPE REF TO zif_fdlog_abap.
 ENDCLASS.
 
 
