@@ -45,6 +45,8 @@ CLASS ltcl_send IMPLEMENTATION.
     ao_entity->set_string_data( `` ).
     cl_abap_testdouble=>configure_call( ao_entity )->and_expect( )->is_called_once( ).
     ao_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
+    cl_abap_testdouble=>configure_call( ao_entity )->and_expect( )->is_called_once( ).
+    ao_entity->set_header_field( iv_name = '~request_uri' iv_value = '/ABAPUNIT' ).
 
     ao_cut->i( 'Test message' ).
     ao_cut->send( ).
@@ -60,8 +62,6 @@ CLASS ltcl_send IMPLEMENTATION.
     ao_rest->post( ao_entity ).
     cl_abap_testdouble=>configure_call( ao_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
     ao_entity->set_string_data( `` ).
-    cl_abap_testdouble=>configure_call( ao_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
-    ao_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
 
     ao_cut->send( ).
 
