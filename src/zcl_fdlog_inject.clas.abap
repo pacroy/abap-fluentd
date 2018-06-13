@@ -8,7 +8,7 @@ CLASS zcl_fdlog_inject DEFINITION FOR TESTING
       inject_http
         IMPORTING io_http TYPE REF TO if_http_client,
       inject_rest
-        IMPORTING io_rest TYPE REF TO cl_rest_http_client,
+        IMPORTING io_rest TYPE REF TO if_rest_client,
       inject_abap
         IMPORTING io_abap TYPE REF TO zif_fdlog_abap.
   PROTECTED SECTION.

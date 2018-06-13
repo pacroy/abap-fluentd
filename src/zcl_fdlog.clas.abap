@@ -76,16 +76,16 @@ CLASS zcl_fdlog IMPLEMENTATION.
 
         DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
 
-        DATA(lo_request) = lo_rest->if_rest_client~create_request_entity( ).
+        DATA(lo_request) = lo_rest->create_request_entity( ).
         DATA(lv_data) = /ui2/cl_json=>serialize( lt_fdlog ).
         REPLACE ALL OCCURRENCES OF '"TIME"' IN lv_data WITH '"time"'.
         lo_request->set_string_data( lv_data ).
         lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
 
-        lo_rest->if_rest_client~post( lo_request ).
+        lo_rest->post( lo_request ).
 
-        DATA(lv_status) = lo_rest->if_rest_client~get_status( ).
-        DATA(lv_response) = lo_rest->if_rest_client~get_response_entity( )->get_string_data( ).
+        DATA(lv_status) = lo_rest->get_status( ).
+        DATA(lv_response) = lo_rest->get_response_entity( )->get_string_data( ).
       CATCH cx_root INTO DATA(x).
     ENDTRY.
   ENDMETHOD.
