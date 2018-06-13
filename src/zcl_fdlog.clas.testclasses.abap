@@ -13,8 +13,8 @@ CLASS ltcl_send DEFINITION FINAL FOR TESTING
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: ao_cut  TYPE REF TO zcl_fdlog.
-    DATA: ao_http  TYPE REF TO if_http_client.
-    DATA: ao_rest  TYPE REF TO zcl_fdlog.
+    DATA: ao_rest  TYPE REF TO if_rest_client.
+    DATA: ao_entity  TYPE REF TO if_rest_entity.
     METHODS:
       setup,
       happy_path FOR TESTING RAISING cx_static_check.
@@ -26,14 +26,28 @@ CLASS ltcl_send IMPLEMENTATION.
   METHOD setup.
 
     ao_cut = NEW #( iv_upd_task = abap_false ).
-*    DATA(lo_) = CAST if_( cl_abap_testdouble=>create( 'IF_' ) ) ##NO_TEXT.
-
+    ao_rest = CAST if_rest_client( cl_abap_testdouble=>create( 'IF_REST_CLIENT' ) ) ##NO_TEXT.
+    zcl_fdlog_inject=>inject_rest( ao_rest ).
+    ao_entity = CAST if_rest_entity( cl_abap_testdouble=>create( 'IF_REST_ENTITY' ) ) ##NO_TEXT.
 
   ENDMETHOD.
 
+
   METHOD happy_path.
+    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_entity ).
+    ao_rest->create_request_entity( ).
+    cl_abap_testdouble=>configure_call( ao_rest )->and_expect( )->is_called_once( ).
+    ao_rest->post( ao_entity ).
+    cl_abap_testdouble=>configure_call( ao_entity )->ignore_all_parameters( )->and_expect( )->is_called_once( ).
+    ao_entity->set_string_data( `` ).
+    cl_abap_testdouble=>configure_call( ao_entity )->and_expect( )->is_called_once( ).
+    ao_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
+
     ao_cut->i( 'Test message' ).
     ao_cut->send( ).
+
+    cl_abap_testdouble=>verify_expectations( ao_rest ).
+    cl_abap_testdouble=>verify_expectations( ao_entity ).
   ENDMETHOD.
 
 ENDCLASS.
