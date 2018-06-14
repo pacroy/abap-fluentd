@@ -3,13 +3,10 @@ INTERFACE zif_fdlog
   TYPES: tv_unixtime TYPE p LENGTH 16 DECIMALS 0.
 
   TYPES: BEGIN OF ts_fdlog,
-           system  TYPE syst-sysid,
-           client  TYPE syst-mandt,
-           user    TYPE syst-uname,
+           corrid  TYPE guid_16,
            msgtype TYPE syst-msgty,
            message TYPE string,
-           msgid   TYPE syst-msgid,
-           msgno   TYPE syst-msgno,
+           user    TYPE syst-uname,
            program TYPE syst-cprog,
            host    TYPE syst-host,
            time    TYPE tv_unixtime,
@@ -23,6 +20,6 @@ INTERFACE zif_fdlog
     e IMPORTING iv_message TYPE string,
     a IMPORTING iv_message TYPE string,
     x IMPORTING iv_message TYPE string,
-    log IMPORTING is_symsg type symsg OPTIONAL,
+    log IMPORTING is_symsg TYPE symsg OPTIONAL,
     send.
 ENDINTERFACE.
