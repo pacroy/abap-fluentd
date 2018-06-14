@@ -9,6 +9,7 @@ CLASS lcl_fdlog_abap DEFINITION
   PUBLIC SECTION.
     INTERFACES lif_fdlog_abap.
     ALIASES get_utc_timestamp FOR lif_fdlog_abap~get_utc_timestamp.
+    ALIASES get_guid FOR lif_fdlog_abap~get_guid.
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -55,6 +56,15 @@ CLASS lcl_fdlog_abap IMPLEMENTATION.
 
   METHOD lif_fdlog_abap~get_utc_timestamp.
     GET TIME STAMP FIELD rv_timestamp.
+  ENDMETHOD.
+
+  METHOD lif_fdlog_abap~get_guid.
+    CALL FUNCTION 'GUID_CREATE'
+      IMPORTING
+        ev_guid_16 = rv_guid   " GUID of length 16 (RAW  Format)
+*       ev_guid_22 =     " GUID of length 22 (CHAR Format) Upper/Lower Case (!)
+*       ev_guid_32 =     " Guid of length 32 (CHAR Format) Uppper Case
+      .
   ENDMETHOD.
 
 ENDCLASS.

@@ -14,6 +14,9 @@ CLASS zcl_fdlog DEFINITION
     ALIASES log FOR zif_fdlog~log.
     ALIASES send FOR zif_fdlog~send.
 
+    CLASS-METHODS:
+      class_constructor.
+
     METHODS:
       constructor
         IMPORTING
@@ -23,6 +26,8 @@ CLASS zcl_fdlog DEFINITION
   PROTECTED SECTION.
   PRIVATE SECTION.
     CONSTANTS c_utc TYPE string VALUE 'UTC' ##NO_TEXT.
+
+    CLASS-DATA: av_guid TYPE guid_16.
 
     DATA: av_inst_name TYPE shm_inst_name.
 
@@ -115,6 +120,7 @@ CLASS zcl_fdlog IMPLEMENTATION.
     rs_fdlog-host = sy-host.
     rs_fdlog-program = sy-cprog.
     rs_fdlog-time = current_unix_time( ).
+    rs_fdlog-corrid = av_guid.
   ENDMETHOD.
 
   METHOD attach_for_read.
@@ -231,6 +237,10 @@ CLASS zcl_fdlog IMPLEMENTATION.
         append( VALUE #( ( ls_fdlog ) ) ).
       CATCH cx_root INTO DATA(x).
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD class_constructor.
+    av_guid = lcl_fdlog_factory=>abap( )->get_guid( ).
   ENDMETHOD.
 
 ENDCLASS.

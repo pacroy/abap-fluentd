@@ -71,22 +71,27 @@ CLASS ltcl_send IMPLEMENTATION.
 
 ENDCLASS.
 
-class ltdb_fdlog_abap definition FOR TESTING create public.
+CLASS ltdb_fdlog_abap DEFINITION FOR TESTING CREATE PUBLIC.
 
-  public section.
+  PUBLIC SECTION.
     INTERFACES lif_fdlog_abap.
     DATA av_timestamp TYPE tzonref-tstamps.
-  protected section.
-  private section.
-endclass.
+    DATA av_guid TYPE guid_16.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
 
-class ltdb_fdlog_abap implementation.
+CLASS ltdb_fdlog_abap IMPLEMENTATION.
 
-  method lif_fdlog_abap~get_utc_timestamp.
+  METHOD lif_fdlog_abap~get_utc_timestamp.
     rv_timestamp = av_timestamp.
-  endmethod.
+  ENDMETHOD.
 
-endclass.
+  METHOD lif_fdlog_abap~get_guid.
+    rv_guid = av_guid.
+  ENDMETHOD.
+
+ENDCLASS.
 
 CLASS ltcl_unix_time DEFINITION FINAL FOR TESTING
   DURATION SHORT
@@ -129,8 +134,9 @@ CLASS ltcl_write_log DEFINITION FINAL FOR TESTING
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: ao_cut  TYPE REF TO zcl_fdlog.
+    CLASS-DATA: ao_abap  TYPE REF TO ltdb_fdlog_abap.
 
-    CLASS-METHODS: class_teardown.
+    CLASS-METHODS: class_setup, class_teardown.
     METHODS:
       setup RAISING cx_static_check,
       happy_path FOR TESTING RAISING cx_static_check,
@@ -140,6 +146,12 @@ ENDCLASS.
 
 
 CLASS ltcl_write_log IMPLEMENTATION.
+
+  METHOD class_setup.
+    ao_abap = NEW ltdb_fdlog_abap( ).
+    ao_abap->av_guid = '1234567890ABCDEF1234567890ABCDEF'.
+    lcl_fdlog_inject=>inject_abap( ao_abap ).
+  ENDMETHOD.
 
   METHOD setup.
 
@@ -162,6 +174,7 @@ CLASS ltcl_write_log IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = sy-cprog act = ls_fdlog1-program ).
     cl_abap_unit_assert=>assert_equals( exp = sy-uname act = ls_fdlog1-user ).
     cl_abap_unit_assert=>assert_equals( exp = 'This is a test' act = ls_fdlog1-message ).
+    cl_abap_unit_assert=>assert_equals( exp = ao_abap->av_guid act = ls_fdlog1-corrid ).
 
     lt_fdlog = ao_cut->read( ).
     cl_abap_unit_assert=>assert_initial( lt_fdlog ).
