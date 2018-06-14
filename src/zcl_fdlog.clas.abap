@@ -86,7 +86,7 @@ CLASS zcl_fdlog IMPLEMENTATION.
         REPLACE ALL OCCURRENCES OF '"TIME"' IN lv_data WITH '"time"'.
         lo_request->set_string_data( lv_data ).
         lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
-        lo_request->set_header_field( iv_name = '~request_uri' iv_value = |/{ av_inst_name }| ) ##NO_TEXT.
+        lo_request->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.{ av_inst_name }| ) ##NO_TEXT.
 
         lo_rest->post( lo_request ).
 

@@ -46,7 +46,7 @@ CLASS ltcl_send IMPLEMENTATION.
     cl_abap_testdouble=>configure_call( ao_entity )->and_expect( )->is_called_once( ).
     ao_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
     cl_abap_testdouble=>configure_call( ao_entity )->and_expect( )->is_called_once( ).
-    ao_entity->set_header_field( iv_name = '~request_uri' iv_value = '/ABAPUNIT' ).
+    ao_entity->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.ABAPUNIT| ).
 
     ao_cut->i( 'Test message' ).
     ao_cut->send( ).
@@ -197,6 +197,8 @@ CLASS ltcl_write_log IMPLEMENTATION.
     lt_fdlog[ 4 ]-msgtype = 'E'.
     lt_fdlog[ 5 ]-msgtype = 'A'.
     lt_fdlog[ 6 ]-msgtype = 'X'.
+
+    cl_abap_unit_assert=>assert_equals( exp = lt_fdlog[ 6 ]-corrid act = lt_fdlog[ 1 ]-corrid ).
   ENDMETHOD.
 
   METHOD write_log.
