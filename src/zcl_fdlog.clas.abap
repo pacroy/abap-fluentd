@@ -218,10 +218,12 @@ CLASS zcl_fdlog IMPLEMENTATION.
           INTO DATA(lv_message).
 
         DATA(ls_fdlog) = create_fdlog( ).
-        ls_fdlog-message = lv_message.
+        if ( ls_symsg-msgid is not INITIAL ).
+          ls_fdlog-message = |{ lv_message }, Msg.Id:({ ls_symsg-msgid }){ ls_symsg-msgno }|.
+        else.
+          ls_fdlog-message =  lv_message.
+        endif.
         ls_fdlog-msgtype = ls_symsg-msgty.
-        ls_fdlog-msgid = ls_symsg-msgid.
-        ls_fdlog-msgno = ls_symsg-msgno.
         append( VALUE #( ( ls_fdlog ) ) ).
       CATCH cx_root INTO DATA(x).
     ENDTRY.

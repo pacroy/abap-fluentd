@@ -210,16 +210,12 @@ CLASS ltcl_write_log IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( lt_fdlog ) ).
 
     DATA(ls_fdlog1) = lt_fdlog[ 1 ].
-    cl_abap_unit_assert=>assert_equals( exp = 'SY' act = ls_fdlog1-msgid ).
-    cl_abap_unit_assert=>assert_equals( exp = '499' act = ls_fdlog1-msgno ).
     cl_abap_unit_assert=>assert_equals( exp = 'S' act = ls_fdlog1-msgtype ).
-    cl_abap_unit_assert=>assert_equals( exp = 'This is a test' act = ls_fdlog1-message ).
+    cl_abap_unit_assert=>assert_equals( exp = 'This is a test, Msg.Id:(SY)499' act = ls_fdlog1-message ).
 
     DATA(ls_fdlog2) = lt_fdlog[ 2 ].
-    cl_abap_unit_assert=>assert_equals( exp = '00' act = ls_fdlog2-msgid ).
-    cl_abap_unit_assert=>assert_equals( exp = '001' act = ls_fdlog2-msgno ).
     cl_abap_unit_assert=>assert_equals( exp = 'I' act = ls_fdlog2-msgtype ).
-    cl_abap_unit_assert=>assert_equals( exp = 'Test againand again' act = ls_fdlog2-message ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Test againand again, Msg.Id:(00)001' act = ls_fdlog2-message ).
   ENDMETHOD.
 
   METHOD class_teardown.
