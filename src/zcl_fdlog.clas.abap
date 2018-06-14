@@ -114,8 +114,6 @@ CLASS zcl_fdlog IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD create_fdlog.
-    rs_fdlog-system = sy-sysid.
-    rs_fdlog-client = sy-mandt.
     rs_fdlog-user = sy-uname.
     rs_fdlog-host = sy-host.
     rs_fdlog-program = sy-cprog.

@@ -167,8 +167,6 @@ CLASS ltcl_write_log IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( lt_fdlog ) ).
 
     DATA(ls_fdlog1) = lt_fdlog[ 1 ].
-    cl_abap_unit_assert=>assert_equals( exp = sy-sysid act = ls_fdlog1-system ).
-    cl_abap_unit_assert=>assert_equals( exp = sy-mandt act = ls_fdlog1-client ).
     cl_abap_unit_assert=>assert_equals( exp = sy-host act = ls_fdlog1-host ).
     cl_abap_unit_assert=>assert_equals( exp = 'I' act = ls_fdlog1-msgtype ).
     cl_abap_unit_assert=>assert_equals( exp = sy-cprog act = ls_fdlog1-program ).
