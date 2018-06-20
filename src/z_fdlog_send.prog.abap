@@ -51,8 +51,8 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD end_of_selection.
     TRY.
-        lcl_factory=>fdlog( )->send( ).
-        MESSAGE 'Send successful' TYPE 'S'.
+        data(lv_count) = lcl_factory=>fdlog( )->send( ).
+        MESSAGE |{ lv_count } record(s) sent successfully.| TYPE 'S'.
       CATCH zcx_fdlog INTO ax_fdlog.
         IF ( ax_fdlog->textid = ax_fdlog->cx_no_data ).
           MESSAGE ax_fdlog->get_text( ) TYPE 'S'.

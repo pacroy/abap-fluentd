@@ -8,7 +8,7 @@ FUNCTION Z_FDLOG_SEND.
 *"----------------------------------------------------------------------
   TRY.
       NEW zcl_fdlog( iv_inst_name = im_inst_name iv_upd_task = abap_false )->zif_fdlog~send( ).
-    CATCH zcx_fdlog INTO DATA(lx_fdlog).
+    CATCH cx_root.
 *     Do nothing
   ENDTRY.
 

@@ -22,6 +22,7 @@ INTERFACE zif_fdlog
     x IMPORTING iv_message TYPE string,
     log IMPORTING is_symsg TYPE symsg OPTIONAL,
     send
+      RETURNING VALUE(rv_count) TYPE i
       RAISING
         zcx_fdlog.
 ENDINTERFACE.

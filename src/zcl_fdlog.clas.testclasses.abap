@@ -103,7 +103,8 @@ CLASS ltcl_send IMPLEMENTATION.
     cl_abap_testdouble=>configure_call( ao_req_entity )->and_expect( )->is_called_once( ).
     ao_req_entity->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.ABAPUNIT| ).
 
-    ao_cut->zif_fdlog~send( ).
+    data(lv_count) = ao_cut->zif_fdlog~send( ).
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lv_count ).
 
     cl_abap_unit_assert=>assert_equals( exp = 0 act = lines( ao_shr_area->ao_root->data ) ).
 

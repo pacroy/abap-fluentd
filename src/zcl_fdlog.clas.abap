@@ -272,6 +272,7 @@ CLASS zcl_fdlog IMPLEMENTATION.
         EXPORTING
           textid = zcx_fdlog=>cx_http_failed.
     ENDIF.
+    rv_count = lines( lt_fdlog ).
   ENDMETHOD.
 
 
