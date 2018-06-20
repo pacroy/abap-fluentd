@@ -5,6 +5,46 @@ CLASS ltcl_unix_time DEFINITION DEFERRED.
 CLASS ltcl_write_log DEFINITION DEFERRED.
 CLASS zcl_fdlog DEFINITION LOCAL FRIENDS ltcl_send ltcl_unix_time ltcl_write_log.
 
+CLASS ltdb_shr_area DEFINITION CREATE PUBLIC FOR TESTING.
+
+  PUBLIC SECTION.
+    INTERFACES lif_fdlog_shr_area.
+
+    DATA: ao_read_exception TYPE REF TO cx_shm_attach_error.
+    DATA: ao_update_exception TYPE REF TO cx_shm_attach_error.
+    DATA: ao_root TYPE REF TO zcl_fdlog_shr_root.
+    DATA: ao_handle TYPE REF TO zcl_fdlog_shr_area.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+
+ENDCLASS.
+
+CLASS ltdb_shr_area IMPLEMENTATION.
+
+  METHOD lif_fdlog_shr_area~attach_for_read.
+    IF ( ao_read_exception IS BOUND ).
+      RAISE EXCEPTION ao_read_exception.
+    ENDIF.
+    handle = ao_handle.
+  ENDMETHOD.
+
+  METHOD lif_fdlog_shr_area~attach_for_update.
+    IF ( ao_update_exception IS BOUND ).
+      RAISE EXCEPTION ao_update_exception.
+    ENDIF.
+    handle = ao_handle.
+  ENDMETHOD.
+
+  METHOD lif_fdlog_shr_area~get_root.
+    root = ao_root.
+  ENDMETHOD.
+
+  METHOD lif_fdlog_shr_area~detach.
+*   Do nothing
+  ENDMETHOD.
+
+ENDCLASS.
+
 CLASS ltcl_send DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
@@ -16,33 +56,40 @@ CLASS ltcl_send DEFINITION FINAL FOR TESTING
     DATA: ao_rest  TYPE REF TO if_rest_client.
     DATA: ao_req_entity  TYPE REF TO if_rest_entity.
     DATA: ao_res_entity  TYPE REF TO if_rest_entity.
+    DATA: ao_shr_area  TYPE REF TO ltdb_shr_area.
     METHODS:
       setup RAISING cx_static_check,
       happy_path FOR TESTING RAISING cx_static_check,
-      no_data_to_send FOR TESTING RAISING cx_static_check.
+      no_data_to_send FOR TESTING RAISING cx_static_check,
+      attach_error FOR TESTING RAISING cx_static_check,
+      http_failed FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
 CLASS ltcl_send IMPLEMENTATION.
 
   METHOD setup.
-
     ao_cut = NEW #( iv_inst_name = 'ABAPUNIT' iv_upd_task = abap_false ).
-    ao_cut->read_and_clear( ).
 
     ao_rest = CAST if_rest_client( cl_abap_testdouble=>create( 'IF_REST_CLIENT' ) ) ##NO_TEXT.
     zcl_fdlog_inject=>inject_rest( ao_rest ).
+
+    ao_shr_area = NEW #( ).
+    DATA(lo_root) = NEW zcl_fdlog_shr_root( ).
+    lo_root->data = VALUE #( ( message = 'TEST' ) ).
+    ao_shr_area->ao_root = lo_root.
+    lcl_fdlog_inject=>inject_shr_area( ao_shr_area ).
+
     ao_req_entity = CAST if_rest_entity( cl_abap_testdouble=>create( 'IF_REST_ENTITY' ) ) ##NO_TEXT.
     ao_res_entity = CAST if_rest_entity( cl_abap_testdouble=>create( 'IF_REST_ENTITY' ) ) ##NO_TEXT.
-
-  ENDMETHOD.
-
-
-  METHOD happy_path.
     cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_req_entity ).
     ao_rest->create_request_entity( ).
     cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_res_entity ).
     ao_rest->get_response_entity( ).
+  ENDMETHOD.
+
+
+  METHOD happy_path.
     cl_abap_testdouble=>configure_call( ao_rest )->and_expect( )->is_called_once( ).
     ao_rest->post( ao_req_entity ).
     cl_abap_testdouble=>configure_call( ao_rest )->returning( '200' ).
@@ -55,7 +102,6 @@ CLASS ltcl_send IMPLEMENTATION.
     cl_abap_testdouble=>configure_call( ao_req_entity )->and_expect( )->is_called_once( ).
     ao_req_entity->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.ABAPUNIT| ).
 
-    ao_cut->zif_fdlog~i( 'Test message' ).
     ao_cut->zif_fdlog~send( ).
 
     cl_abap_testdouble=>verify_expectations( ao_rest ).
@@ -63,8 +109,8 @@ CLASS ltcl_send IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD no_data_to_send.
-    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_req_entity ).
-    ao_rest->create_request_entity( ).
+    CLEAR ao_shr_area->ao_root->data.
+
     cl_abap_testdouble=>configure_call( ao_rest )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
     ao_rest->post( ao_req_entity ).
     cl_abap_testdouble=>configure_call( ao_req_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
@@ -79,6 +125,31 @@ CLASS ltcl_send IMPLEMENTATION.
 
     cl_abap_testdouble=>verify_expectations( ao_rest ).
     cl_abap_testdouble=>verify_expectations( ao_req_entity ).
+  ENDMETHOD.
+
+  METHOD attach_error.
+    ao_shr_area->ao_update_exception = NEW cx_shm_no_active_version( ).
+
+    TRY.
+        ao_cut->zif_fdlog~send( ).
+        cl_abap_unit_assert=>fail( 'ZCX_FDLOG is not raised' ).
+      CATCH zcx_fdlog INTO DATA(x).
+        cl_abap_unit_assert=>assert_equals( exp = x->cx_attach_error act = x->textid ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD http_failed.
+    cl_abap_testdouble=>configure_call( ao_rest )->and_expect( )->is_called_once( ).
+    ao_rest->post( ao_req_entity ).
+    cl_abap_testdouble=>configure_call( ao_rest )->returning( '500' ).
+    ao_rest->get_status( ).
+
+    TRY.
+        ao_cut->zif_fdlog~send( ).
+        cl_abap_unit_assert=>fail( 'ZCX_FDLOG is not raised' ).
+      CATCH zcx_fdlog INTO DATA(x).
+        cl_abap_unit_assert=>assert_equals( exp = x->cx_http_failed act = x->textid ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
