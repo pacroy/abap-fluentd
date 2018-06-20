@@ -23,5 +23,5 @@ INTERFACE zif_fdlog
     log IMPORTING is_symsg TYPE symsg OPTIONAL,
     send
       RAISING
-        cx_shm_attach_error.
+        zcx_fdlog.
 ENDINTERFACE.
