@@ -6,20 +6,18 @@ CLASS zcl_fdlog DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_fdlog.
 
-    CLASS-METHODS:
-      class_constructor.
-
     METHODS:
       constructor
         IMPORTING
           iv_inst_name TYPE shm_inst_name DEFAULT cl_shm_area=>default_instance
-          iv_upd_task  TYPE abap_bool DEFAULT abap_true.
+          iv_upd_task  TYPE abap_bool DEFAULT abap_true
+          iv_rfc_dest  TYPE rfcdest DEFAULT 'FLUENTD' ##NO_TEXT..
 
   PROTECTED SECTION.
   PRIVATE SECTION.
     CONSTANTS c_utc TYPE string VALUE 'UTC' ##NO_TEXT.
 
-    CLASS-DATA: av_guid TYPE guid_16.
+    DATA: av_guid TYPE guid_16.
 
     DATA: av_inst_name TYPE shm_inst_name.
 
@@ -110,12 +108,9 @@ CLASS zcl_fdlog IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD class_constructor.
-    av_guid = lcl_fdlog_factory=>abap( )->get_guid( ).
-  ENDMETHOD.
-
-
   METHOD constructor.
+    zcl_fdlog_factory=>av_rfc_dest = iv_rfc_dest.
+    av_guid = lcl_fdlog_factory=>abap( )->get_guid( ).
     av_inst_name = iv_inst_name.
 
     IF ( iv_upd_task = abap_true ).

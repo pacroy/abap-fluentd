@@ -5,6 +5,8 @@ CLASS zcl_fdlog_factory DEFINITION
   GLOBAL FRIENDS zcl_fdlog_inject.
 
   PUBLIC SECTION.
+    CLASS-DATA: av_rfc_dest TYPE rfcdest VALUE 'FLUENTD' ##NO_TEXT.
+
     CLASS-METHODS:
       http
         RETURNING VALUE(ro_http) TYPE REF TO if_http_client
@@ -15,8 +17,6 @@ CLASS zcl_fdlog_factory DEFINITION
         RETURNING VALUE(ro_rest) TYPE REF TO if_rest_client.
   PROTECTED SECTION.
   PRIVATE SECTION.
-    CONSTANTS c_rfc_dest TYPE rfcdest VALUE 'FLUENTD' ##NO_TEXT.
-
     CLASS-DATA: ao_http TYPE REF TO if_http_client.
     CLASS-DATA: ao_rest TYPE REF TO if_rest_client.
 ENDCLASS.
@@ -29,7 +29,7 @@ CLASS zcl_fdlog_factory IMPLEMENTATION.
     IF ( ao_http IS NOT BOUND ).
       cl_http_client=>create_by_destination(
         EXPORTING
-          destination = c_rfc_dest
+          destination = av_rfc_dest
         IMPORTING
           client = ao_http
         EXCEPTIONS
