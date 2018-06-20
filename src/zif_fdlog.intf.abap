@@ -21,5 +21,7 @@ INTERFACE zif_fdlog
     a IMPORTING iv_message TYPE string,
     x IMPORTING iv_message TYPE string,
     log IMPORTING is_symsg TYPE symsg OPTIONAL,
-    send.
+    send
+      RAISING
+        cx_shm_attach_error.
 ENDINTERFACE.

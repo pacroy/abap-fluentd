@@ -5,14 +5,6 @@ CLASS zcl_fdlog DEFINITION
 
   PUBLIC SECTION.
     INTERFACES zif_fdlog.
-    ALIASES i FOR zif_fdlog~i.
-    ALIASES s FOR zif_fdlog~s.
-    ALIASES w FOR zif_fdlog~w.
-    ALIASES e FOR zif_fdlog~e.
-    ALIASES a FOR zif_fdlog~a.
-    ALIASES x FOR zif_fdlog~x.
-    ALIASES log FOR zif_fdlog~log.
-    ALIASES send FOR zif_fdlog~send.
 
     CLASS-METHODS:
       class_constructor.
@@ -74,26 +66,23 @@ ENDCLASS.
 
 CLASS zcl_fdlog IMPLEMENTATION.
 
-  METHOD send.
-    TRY.
-        DATA(lt_fdlog) = read_and_clear( ).
-        IF ( lt_fdlog IS INITIAL ). RETURN. ENDIF.
+  METHOD zif_fdlog~send.
+    DATA(lt_fdlog) = read_and_clear( ).
+    IF ( lt_fdlog IS INITIAL ). RETURN. ENDIF.
 
-        DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
+    DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
 
-        DATA(lo_request) = lo_rest->create_request_entity( ).
-        DATA(lv_data) = /ui2/cl_json=>serialize( lt_fdlog ).
-        REPLACE ALL OCCURRENCES OF '"TIME"' IN lv_data WITH '"time"'.
-        lo_request->set_string_data( lv_data ).
-        lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
-        lo_request->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.{ av_inst_name }| ) ##NO_TEXT.
+    DATA(lo_request) = lo_rest->create_request_entity( ).
+    DATA(lv_data) = /ui2/cl_json=>serialize( lt_fdlog ).
+    REPLACE ALL OCCURRENCES OF '"TIME"' IN lv_data WITH '"time"'.
+    lo_request->set_string_data( lv_data ).
+    lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
+    lo_request->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.{ av_inst_name }| ) ##NO_TEXT.
 
-        lo_rest->post( lo_request ).
+    lo_rest->post( lo_request ).
 
-        DATA(lv_status) = lo_rest->get_status( ).
-        DATA(lv_response) = lo_rest->get_response_entity( )->get_string_data( ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
+    DATA(lv_status) = lo_rest->get_status( ).
+    DATA(lv_response) = lo_rest->get_response_entity( )->get_string_data( ).
   ENDMETHOD.
 
   METHOD current_unix_time.

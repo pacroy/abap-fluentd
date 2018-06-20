@@ -14,7 +14,8 @@ CLASS ltcl_send DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     DATA: ao_cut  TYPE REF TO zcl_fdlog.
     DATA: ao_rest  TYPE REF TO if_rest_client.
-    DATA: ao_entity  TYPE REF TO if_rest_entity.
+    DATA: ao_req_entity  TYPE REF TO if_rest_entity.
+    DATA: ao_res_entity  TYPE REF TO if_rest_entity.
     METHODS:
       setup RAISING cx_static_check,
       happy_path FOR TESTING RAISING cx_static_check,
@@ -31,42 +32,46 @@ CLASS ltcl_send IMPLEMENTATION.
 
     ao_rest = CAST if_rest_client( cl_abap_testdouble=>create( 'IF_REST_CLIENT' ) ) ##NO_TEXT.
     zcl_fdlog_inject=>inject_rest( ao_rest ).
-    ao_entity = CAST if_rest_entity( cl_abap_testdouble=>create( 'IF_REST_ENTITY' ) ) ##NO_TEXT.
+    ao_req_entity = CAST if_rest_entity( cl_abap_testdouble=>create( 'IF_REST_ENTITY' ) ) ##NO_TEXT.
+    ao_res_entity = CAST if_rest_entity( cl_abap_testdouble=>create( 'IF_REST_ENTITY' ) ) ##NO_TEXT.
 
   ENDMETHOD.
 
 
   METHOD happy_path.
-    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_entity ).
+    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_req_entity ).
     ao_rest->create_request_entity( ).
-    cl_abap_testdouble=>configure_call( ao_rest )->and_expect( )->is_called_once( ).
-    ao_rest->post( ao_entity ).
-    cl_abap_testdouble=>configure_call( ao_entity )->ignore_all_parameters( )->and_expect( )->is_called_once( ).
-    ao_entity->set_string_data( `` ).
-    cl_abap_testdouble=>configure_call( ao_entity )->and_expect( )->is_called_once( ).
-    ao_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
-    cl_abap_testdouble=>configure_call( ao_entity )->and_expect( )->is_called_once( ).
-    ao_entity->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.ABAPUNIT| ).
+    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_res_entity ).
+    ao_rest->get_response_entity( ).
 
-    ao_cut->i( 'Test message' ).
-    ao_cut->send( ).
+    cl_abap_testdouble=>configure_call( ao_rest )->and_expect( )->is_called_once( ).
+    ao_rest->post( ao_req_entity ).
+    cl_abap_testdouble=>configure_call( ao_req_entity )->ignore_all_parameters( )->and_expect( )->is_called_once( ).
+    ao_req_entity->set_string_data( `` ).
+    cl_abap_testdouble=>configure_call( ao_req_entity )->and_expect( )->is_called_once( ).
+    ao_req_entity->set_content_type( if_rest_media_type=>gc_appl_json ).
+    cl_abap_testdouble=>configure_call( ao_req_entity )->and_expect( )->is_called_once( ).
+    ao_req_entity->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.ABAPUNIT| ).
+
+    ao_cut->zif_fdlog~i( 'Test message' ).
+    ao_cut->zif_fdlog~send( ).
 
     cl_abap_testdouble=>verify_expectations( ao_rest ).
-    cl_abap_testdouble=>verify_expectations( ao_entity ).
+    cl_abap_testdouble=>verify_expectations( ao_req_entity ).
   ENDMETHOD.
 
   METHOD no_data_to_send.
-    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_entity ).
+    cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_req_entity ).
     ao_rest->create_request_entity( ).
     cl_abap_testdouble=>configure_call( ao_rest )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
-    ao_rest->post( ao_entity ).
-    cl_abap_testdouble=>configure_call( ao_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
-    ao_entity->set_string_data( `` ).
+    ao_rest->post( ao_req_entity ).
+    cl_abap_testdouble=>configure_call( ao_req_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
+    ao_req_entity->set_string_data( `` ).
 
-    ao_cut->send( ).
+    ao_cut->zif_fdlog~send( ).
 
     cl_abap_testdouble=>verify_expectations( ao_rest ).
-    cl_abap_testdouble=>verify_expectations( ao_entity ).
+    cl_abap_testdouble=>verify_expectations( ao_req_entity ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -162,7 +167,7 @@ CLASS ltcl_write_log IMPLEMENTATION.
 
   METHOD happy_path.
 
-    ao_cut->i( 'This is a test' ).
+    ao_cut->zif_fdlog~i( 'This is a test' ).
     DATA(lt_fdlog) = ao_cut->read_and_clear( ).
     cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( lt_fdlog ) ).
 
@@ -179,12 +184,12 @@ CLASS ltcl_write_log IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD multiple_types.
-    ao_cut->i( 'I message' ).
-    ao_cut->s( 'S message' ).
-    ao_cut->w( 'W message' ).
-    ao_cut->e( 'E message' ).
-    ao_cut->a( 'A message' ).
-    ao_cut->x( 'X message' ).
+    ao_cut->zif_fdlog~i( 'I message' ).
+    ao_cut->zif_fdlog~s( 'S message' ).
+    ao_cut->zif_fdlog~w( 'W message' ).
+    ao_cut->zif_fdlog~e( 'E message' ).
+    ao_cut->zif_fdlog~a( 'A message' ).
+    ao_cut->zif_fdlog~x( 'X message' ).
 
     DATA(lt_fdlog) = ao_cut->read_and_clear( ).
     cl_abap_unit_assert=>assert_equals( exp = 6 act = lines( lt_fdlog ) ).
@@ -203,8 +208,8 @@ CLASS ltcl_write_log IMPLEMENTATION.
     MESSAGE ID 'SY' TYPE 'S' NUMBER 499
       WITH 'This is' 'a test'.
 
-    ao_cut->log( ).
-    ao_cut->log( VALUE #( msgid = '00' msgno = '001' msgty = 'I' msgv1 = 'Test again' msgv2 = 'and again' ) ).
+    ao_cut->zif_fdlog~log( ).
+    ao_cut->zif_fdlog~log( VALUE #( msgid = '00' msgno = '001' msgty = 'I' msgv1 = 'Test again' msgv2 = 'and again' ) ).
 
     DATA(lt_fdlog) = ao_cut->read_and_clear( ).
     cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( lt_fdlog ) ).
