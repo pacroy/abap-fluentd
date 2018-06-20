@@ -246,11 +246,28 @@ CLASS zcl_fdlog IMPLEMENTATION.
     lo_request->set_content_type( if_rest_media_type=>gc_appl_json ).
     lo_request->set_header_field( iv_name = '~request_uri' iv_value = |/{ sy-sysid }.{ sy-mandt }.{ av_inst_name }| ) ##NO_TEXT.
 
-    lo_rest->post( lo_request ).
+    TRY.
+        lo_rest->post( lo_request ).
+      CATCH cx_rest_client_exception INTO DATA(lx_rest).
+        TRY.
+            append( lt_fdlog ).
+          CATCH cx_shm_attach_error.
+            "Do nothing
+        ENDTRY.
+        RAISE EXCEPTION TYPE zcx_fdlog
+          EXPORTING
+            textid   = zcx_fdlog=>cx_http_failed
+            previous = lx_rest.
+    ENDTRY.
 
     DATA(lv_status) = lo_rest->get_status( ).
     DATA(lv_response) = lo_rest->get_response_entity( )->get_string_data( ).
     IF ( NOT lv_status BETWEEN 200 AND 299 ).
+      TRY.
+          append( lt_fdlog ).
+        CATCH cx_shm_attach_error.
+          "Do nothing
+      ENDTRY.
       RAISE EXCEPTION TYPE zcx_fdlog
         EXPORTING
           textid = zcx_fdlog=>cx_http_failed.

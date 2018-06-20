@@ -62,7 +62,8 @@ CLASS ltcl_send DEFINITION FINAL FOR TESTING
       happy_path FOR TESTING RAISING cx_static_check,
       no_data_to_send FOR TESTING RAISING cx_static_check,
       attach_error FOR TESTING RAISING cx_static_check,
-      http_failed FOR TESTING RAISING cx_static_check.
+      http_failed FOR TESTING RAISING cx_static_check,
+      send_failed FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -104,6 +105,8 @@ CLASS ltcl_send IMPLEMENTATION.
 
     ao_cut->zif_fdlog~send( ).
 
+    cl_abap_unit_assert=>assert_equals( exp = 0 act = lines( ao_shr_area->ao_root->data ) ).
+
     cl_abap_testdouble=>verify_expectations( ao_rest ).
     cl_abap_testdouble=>verify_expectations( ao_req_entity ).
   ENDMETHOD.
@@ -136,6 +139,8 @@ CLASS ltcl_send IMPLEMENTATION.
       CATCH zcx_fdlog INTO DATA(x).
         cl_abap_unit_assert=>assert_equals( exp = x->cx_attach_error act = x->textid ).
     ENDTRY.
+
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( ao_shr_area->ao_root->data ) ).
   ENDMETHOD.
 
   METHOD http_failed.
@@ -150,6 +155,22 @@ CLASS ltcl_send IMPLEMENTATION.
       CATCH zcx_fdlog INTO DATA(x).
         cl_abap_unit_assert=>assert_equals( exp = x->cx_http_failed act = x->textid ).
     ENDTRY.
+
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( ao_shr_area->ao_root->data ) ).
+  ENDMETHOD.
+
+  METHOD send_failed.
+    cl_abap_testdouble=>configure_call( ao_rest )->raise_exception( NEW cx_rest_client_exception( textid = cx_rest_client_exception=>http_client_comm_failure ) ).
+    ao_rest->post( ao_req_entity ).
+
+    TRY.
+        ao_cut->zif_fdlog~send( ).
+        cl_abap_unit_assert=>fail( 'ZCX_FDLOG is not raised' ).
+      CATCH zcx_fdlog INTO DATA(x).
+        cl_abap_unit_assert=>assert_equals( exp = x->cx_http_failed act = x->textid ).
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( ao_shr_area->ao_root->data ) ).
   ENDMETHOD.
 
 ENDCLASS.
