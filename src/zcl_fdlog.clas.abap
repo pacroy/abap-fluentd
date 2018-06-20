@@ -67,8 +67,19 @@ ENDCLASS.
 CLASS zcl_fdlog IMPLEMENTATION.
 
   METHOD zif_fdlog~send.
-    DATA(lt_fdlog) = read_and_clear( ).
-    IF ( lt_fdlog IS INITIAL ). RETURN. ENDIF.
+    TRY.
+        DATA(lt_fdlog) = read_and_clear( ).
+      CATCH cx_shm_attach_error INTO DATA(lx_attach_error).
+        RAISE EXCEPTION TYPE zcx_fdlog
+          EXPORTING
+            textid   = zcx_fdlog=>cx_attach_error
+            previous = lx_attach_error.
+    ENDTRY.
+    IF ( lt_fdlog IS INITIAL ).
+      RAISE EXCEPTION TYPE zcx_fdlog
+        EXPORTING
+          textid = zcx_fdlog=>cx_no_data.
+    ENDIF.
 
     DATA(lo_rest) = zcl_fdlog_factory=>rest( zcl_fdlog_factory=>http( ) ).
 
@@ -83,6 +94,11 @@ CLASS zcl_fdlog IMPLEMENTATION.
 
     DATA(lv_status) = lo_rest->get_status( ).
     DATA(lv_response) = lo_rest->get_response_entity( )->get_string_data( ).
+    IF ( NOT lv_status BETWEEN 200 AND 299 ).
+      RAISE EXCEPTION TYPE zcx_fdlog
+        EXPORTING
+          textid = zcx_fdlog=>cx_http_failed.
+    ENDIF.
   ENDMETHOD.
 
   METHOD current_unix_time.
@@ -207,11 +223,11 @@ CLASS zcl_fdlog IMPLEMENTATION.
           INTO DATA(lv_message).
 
         DATA(ls_fdlog) = create_fdlog( ).
-        if ( ls_symsg-msgid is not INITIAL ).
+        IF ( ls_symsg-msgid IS NOT INITIAL ).
           ls_fdlog-message = |{ lv_message }, Msg.Id:({ ls_symsg-msgid }){ ls_symsg-msgno }|.
-        else.
+        ELSE.
           ls_fdlog-message =  lv_message.
-        endif.
+        ENDIF.
         ls_fdlog-msgtype = ls_symsg-msgty.
         append( VALUE #( ( ls_fdlog ) ) ).
       CATCH cx_root INTO DATA(x).

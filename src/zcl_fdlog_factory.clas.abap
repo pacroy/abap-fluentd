@@ -35,7 +35,9 @@ CLASS zcl_fdlog_factory IMPLEMENTATION.
         EXCEPTIONS
           OTHERS = 1 ).
       IF ( sy-subrc <> 0 ).
-        RAISE EXCEPTION TYPE zcx_fdlog.
+        RAISE EXCEPTION TYPE zcx_fdlog
+          EXPORTING
+            textid = zcx_fdlog=>cx_http_client.
       ENDIF.
     ENDIF.
     ro_http = ao_http.

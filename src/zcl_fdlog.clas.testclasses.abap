@@ -43,9 +43,11 @@ CLASS ltcl_send IMPLEMENTATION.
     ao_rest->create_request_entity( ).
     cl_abap_testdouble=>configure_call( ao_rest )->returning( ao_res_entity ).
     ao_rest->get_response_entity( ).
-
     cl_abap_testdouble=>configure_call( ao_rest )->and_expect( )->is_called_once( ).
     ao_rest->post( ao_req_entity ).
+    cl_abap_testdouble=>configure_call( ao_rest )->returning( '200' ).
+    ao_rest->get_status( ).
+
     cl_abap_testdouble=>configure_call( ao_req_entity )->ignore_all_parameters( )->and_expect( )->is_called_once( ).
     ao_req_entity->set_string_data( `` ).
     cl_abap_testdouble=>configure_call( ao_req_entity )->and_expect( )->is_called_once( ).
@@ -68,7 +70,12 @@ CLASS ltcl_send IMPLEMENTATION.
     cl_abap_testdouble=>configure_call( ao_req_entity )->ignore_all_parameters( )->and_expect( )->is_never_called( ).
     ao_req_entity->set_string_data( `` ).
 
-    ao_cut->zif_fdlog~send( ).
+    TRY.
+        ao_cut->zif_fdlog~send( ).
+        cl_abap_unit_assert=>fail( 'ZCX_FDLOG is not raised' ).
+      CATCH zcx_fdlog INTO DATA(lx_fdlog).
+        cl_abap_unit_assert=>assert_equals( exp = lx_fdlog->cx_no_data act = lx_fdlog->textid ).
+    ENDTRY.
 
     cl_abap_testdouble=>verify_expectations( ao_rest ).
     cl_abap_testdouble=>verify_expectations( ao_req_entity ).
