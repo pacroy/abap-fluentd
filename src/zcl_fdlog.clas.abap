@@ -114,7 +114,6 @@ CLASS zcl_fdlog IMPLEMENTATION.
     av_inst_name = iv_inst_name.
 
     IF ( iv_upd_task = abap_true ).
-      SET UPDATE TASK LOCAL.
       CALL FUNCTION 'Z_FDLOG_SEND' IN UPDATE TASK
         EXPORTING
           im_inst_name = av_inst_name.
