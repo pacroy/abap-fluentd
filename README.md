@@ -1,5 +1,7 @@
 # Fluentd client in ABAP
 
+Clone or import using [abapGit](https://github.com/larshp/abapGit)
+
 ## Sample Usage 
 
 ```abap
@@ -49,3 +51,4 @@ ENDCLASS.
 
 **DO NOT FORGET TO COMMIT WORK**
 
+![](/img/kibana_abap_fluentd.jpg)
